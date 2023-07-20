@@ -1,11 +1,12 @@
-import random
-
 import requests
 
+"""
+GetClient handles the GET requests for the Spotify Web API, containing different functions
+that obtain information about a particular artist such as related artists or songs
+"""
 
-# Creates a class that uses Spotify Web API and GET requests to obtain information
-# such as artists, songs, and related artists
-class SpotifyClient:
+
+class GetClient:
 
     # Constructor initializes token and authorization header
     def __init__(self, token):

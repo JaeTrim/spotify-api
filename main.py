@@ -1,56 +1,56 @@
+import requests
+import os
+import base64
+from get_client import GetClient
+from post_client import PostClient
 from dotenv import load_dotenv
-
 from tkinter import *
 from tkinter.ttk import *
 from ttkbootstrap import Style
 
-import requests
-
-import os
-import base64
-
-from spotify_client import SpotifyClient
+USER_ID = "jaetrimx"
 
 # Loads .env file containing the client id and client secret
 load_dotenv()
-client_id = os.getenv("CLIENT_ID")
-client_secret = os.getenv("CLIENT_SECRET")
+client_data = (os.getenv("CLIENT_ID") + ":" + os.getenv("CLIENT_SECRET"))
+client_url = os.getenv("temp_url")
 
 
-# Creates Spotify API Auth Token; encodes formatted string containing client id and client secret into bytes and then
-# converts binary data to text. Uses GET request to obtain Spotify data
-def create_token(c_id, c_secret):
-    format_token = c_id + ":" + c_secret
-    token_bytes = format_token.encode("utf-8")
+# Creates and formats the authorization token and uses POST request to grant access
+def create_token(env_data):
+    auth_url = "https://accounts.spotify.com/api/token"
+    scopes = ["playlist-modify-public", "playlist-modify-private"]
+    token_bytes = env_data.encode("utf-8")
     bin_to_text = str(base64.b64encode(token_bytes), "utf-8")
     headers = {
         "Authorization": "Basic " + bin_to_text,
         "Content-Type": "application/x-www-form-urlencoded"
     }
-    data = {"grant_type": "client_credentials"}
-    spotify_url = "https://accounts.spotify.com/api/token"
-    response = requests.post(url=spotify_url, headers=headers, data=data)
+    data = {"grant_type": "client_credentials",
+            "scope": " ".join(scopes),
+            }
+    response = requests.post(url=auth_url, headers=headers, data=data)
     json_data = response.json()
     access_token = json_data["access_token"]
     return access_token
 
 
-# Creates a token and calls spotify client using the token
-token = create_token(client_id, client_secret)
-get_spot_api = SpotifyClient(token)
+# Initializes the authorization token for later use
+token = create_token(client_data)
+print(token)
 
+# Creates instances of the GetClient and PostClient
+get_spot_api = GetClient(token)
+get_post_api = PostClient(token, USER_ID)
 
-# Makes a list based on different data types such as songs, artists, etc. for formatting purposes
-def create_list(artist_type):
-    result = [f"{idx + 1}. {spotify_type['name']}" for idx, spotify_type in enumerate(artist_type)]
-    return result
+"""
+Mode 0 == Show Artists Songs
+Mode 1 == Save Song Names
+Mode 2 == Display related Artists
+Makes global variable for the mode so the program knows which information to display based on mode
+Based on the which mode, the screen displays different prompts
+"""
 
-
-# Mode 0 == Show Artists Songs
-# Mode 1 == Save Song Names
-# Mode 2 == Display related Artists
-# Makes global variable for the mode so the program knows which information to display based on mode
-# Based on the which mode, the screen displays different prompts
 selected_mode = -1
 
 
@@ -64,23 +64,16 @@ def mode():
         canvas.delete("all")
         main_header()
         sub_header("Enter an Artist to See Popular Songs")
-    # When the user changes to this mode, songs can be typed in and saved to be added to a playlist later
+    # When the user changes to this mode, an artist can be typed in and a list of similar artists show up
     elif selected_mode == 1:
         canvas.delete("all")
         main_header()
         sub_header("Enter artist to see related artists")
-    # When the user changes to this mode, an artist can be typed in and a list of similar artists show up
+    # When the user changes to this mode, songs can be typed in and saved to be added to a playlist later
     elif selected_mode == 2:
         canvas.delete("all")
         main_header()
-        sub_header("Enter Song Names to Keep Track Of")
-
-
-# Resets the canvas text to the proper mode
-def reset_canvas(text):
-    canvas.delete("all")
-    main_header()
-    sub_header(f"{text}")
+        sub_header("Create a Playlist of Songs from Entered Artist")
 
 
 # Deals with the main portion of the project, finding artists and
@@ -96,11 +89,10 @@ def spotify_data():
         song_list = create_list(songs)
         count = 0
         while count < 10:
-            songs = canvas.create_text(400, height, text=f"{song_list[count]}", font=("Helvetica", 16, "normal"),
-                                       fill="white")
+            canvas.create_text(400, height, text=f"{song_list[count]}", font=("Helvetica", 16, "normal"),
+                               fill="white")
             count += 1
             height += 28
-    # Show related artists
     elif selected_mode == 1:
         reset_canvas("Enter artist to see related artists")
         user_input = user_entry.get()
@@ -110,17 +102,30 @@ def spotify_data():
         artist_list = create_list(related_artists)
         count = 0
         while count < 10:
-            related_list = canvas.create_text(400, height, text=f"{artist_list[count]}",
-                                              font=("Helvetica", 16, "normal"),
-                                              fill="white")
+            canvas.create_text(400, height, text=f"{artist_list[count]}",
+                               font=("Helvetica", 16, "normal"),
+                               fill="white")
             count += 1
             height += 28
-    else:
-        reset_canvas("Enter Song Names to Keep Track Of")
-        # Code this to eventually create a spotify playlist that contains the songs that have been entered
+    elif selected_mode == 2:
+        reset_canvas("Create a Playlist of Songs from Entered Artist")
+        get_post_api.create_playlist(user_entry.get())
 
 
-# Creates Tkinter GUI Interface
+# Makes a list based on different data types such as songs, artists, etc. for formatting purposes
+def create_list(artist_type):
+    result = [f"{idx + 1}. {spotify_type['name']}" for idx, spotify_type in enumerate(artist_type)]
+    return result
+
+
+# Resets the canvas text to the proper mode
+def reset_canvas(text):
+    canvas.delete("all")
+    main_header()
+    sub_header(f"{text}")
+
+
+# Creates the GUI Interface using Tkinter and TtkBoostrap
 window = Tk()
 window.title("Spotify Stats")
 window.geometry("900x700")
