@@ -1,3 +1,9 @@
+"""
+This class is a current work in progress, trying to figure out how to use POST requests and proper scope
+and authorization to create playlists on a user's spotify account
+"""
+
+
 import json
 
 import requests

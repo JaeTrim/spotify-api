@@ -1,12 +1,14 @@
 import requests
 import os
 import base64
+import customtkinter as ctk
 from get_client import GetClient
 from post_client import PostClient
 from dotenv import load_dotenv
 from tkinter import *
 from tkinter.ttk import *
 from ttkbootstrap import Style
+import pandas
 
 USER_ID = "jaetrimx"
 
@@ -37,11 +39,10 @@ def create_token(env_data):
 
 # Initializes the authorization token for later use
 token = create_token(client_data)
-print(token)
 
 # Creates instances of the GetClient and PostClient
 get_spot_api = GetClient(token)
-get_post_api = PostClient(token, USER_ID)
+# get_post_api = PostClient(token, USER_ID)
 
 """
 Mode 0 == Show Artists Songs
@@ -73,12 +74,16 @@ def mode():
     elif selected_mode == 2:
         canvas.delete("all")
         main_header()
-        sub_header("Create a Playlist of Songs from Entered Artist")
+        sub_header("Store Songs You are Interested In")
 
 
 # Deals with the main portion of the project, finding artists and
 # songs and displaying on the screen based on selected mode
+user_entered_songs = []
+
+
 def spotify_data():
+    songs_count = 0
     height = 275
     if selected_mode == 0:
         reset_canvas("Enter an Artist to See Popular Songs")
@@ -89,7 +94,8 @@ def spotify_data():
         song_list = create_list(songs)
         count = 0
         while count < 10:
-            canvas.create_text(400, height, text=f"{song_list[count]}", font=("Helvetica", 16, "normal"),
+            canvas.create_text(400, height, text=f"{song_list[count]}",
+                               font=("Helvetica", 16, "normal"),
                                fill="white")
             count += 1
             height += 28
@@ -108,8 +114,20 @@ def spotify_data():
             count += 1
             height += 28
     elif selected_mode == 2:
-        reset_canvas("Create a Playlist of Songs from Entered Artist")
-        get_post_api.create_playlist(user_entry.get())
+        reset_canvas("Store Songs You are Interested In")
+        song_title = user_entry.get()
+        user_entered_songs.append(song_title)
+        songs_to_csv(user_entered_songs)
+        canvas.create_text(400, height, text=f"{song_title} Added",
+                           font=("Helvetica", 16, "normal"),
+                           fill="white")
+
+
+def songs_to_csv(songs_list):
+    data = {'Song Titles:': songs_list}
+    dataframe = pandas.DataFrame(data)
+    file = "users_saved_songs.csv"
+    dataframe.to_csv(file, index=False)
 
 
 # Makes a list based on different data types such as songs, artists, etc. for formatting purposes
